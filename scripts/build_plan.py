@@ -105,6 +105,26 @@ class Planner:
         return mapped, ("no_definition",
                         "shopify.%s is not enabled in this store" % mapped)
 
+    def has_value(self, product, key):
+        """Whether the product's metafield actually holds anything.
+
+        A rollback cannot delete a category metafield -- metafieldsDelete is
+        refused on the `shopify` namespace for this connector -- so it clears it
+        to `[]` instead. That empty row must count as UNSET, otherwise the
+        residue of one rolled-back run would permanently block the next one from
+        filling the same attribute.
+        """
+        spec = (product.get("metafields") or {}).get(key)
+        if spec is None:
+            return False
+        raw = (spec.get("value") or "").strip()
+        if raw in ("", "[]", "null"):
+            return False
+        try:
+            return bool(json.loads(raw))
+        except ValueError:
+            return True
+
     def allowed_values(self, handle):
         attribute = self.index["attributes"].get(handle)
         if not attribute:
@@ -259,6 +279,22 @@ class Planner:
                    "'%s' does not declare this attribute" % category["name"])
             return
 
+        # A companion-only attribute never writes a metafield of its own. Its
+        # value lives INSIDE the primary attribute's metaobject as a required
+        # reference field -- `pattern` inside a `shopify--color-pattern` entry.
+        # Emitting it here would write the shared key twice, second write wins.
+        companion_only = self.key_map.get("companion_only_attributes") or {}
+        if handle in companion_only:
+            entry["metafields"].append({
+                "key": companion_only[handle], "attribute": handle,
+                "action": "companion_only", "values": [],
+                "note": "supplies the required %s field inside the '%s' entry; "
+                        "it does not write a metafield of its own"
+                        % (handle, self.key_map["primary_attribute"]
+                           .get(companion_only[handle], "primary")),
+            })
+            return
+
         key, problem = self.metafield_key(handle)
         if problem and problem[0] == "unresolved_attribute":
             self.unresolved.append({"gid": gid, "title": title,
@@ -267,7 +303,7 @@ class Planner:
             return
 
         allowed = self.allowed_values(handle)
-        already = key in (product.get("metafields") or {})
+        already = self.has_value(product, key)
         if already and not self.config["overwrite_existing_metafields"]:
             reject(self.rejected, gid, title, handle, None, "already_set",
                    "shopify.%s already has a value; overwrite is off" % key)
@@ -415,6 +451,27 @@ def write_md(path, plan):
            counts["category_keep"], counts["values"], counts["metafields"],
            len(plan["new_metaobjects"]), len(plan["definitions_to_enable"]),
            counts["rejected"]))
+
+    changed = [p for p in plan["products"]
+               if p["category"]["action"] == "change"]
+    if changed:
+        add("## Category changes — approve these separately\n")
+        add("A changed category moves the product within Shopify's own taxonomy "
+            "and in every channel that reads it. It is the most visible thing "
+            "this run does. Read this section on its own and approve it "
+            "separately from the rest of the plan.\n")
+        add("| Product | From | To |")
+        add("|---|---|---|")
+        for product in changed:
+            category = product["category"]
+            add("| %s | %s<br>`%s` | **%s**<br>`%s` |"
+                % (product["title"], category["from_name"], category["from"],
+                   category["to_name"], category["to"]))
+        add("")
+        for product in changed:
+            add("- **%s** — %s" % (product["title"],
+                                   product["category"]["reason"]))
+        add("")
 
     add("## Products\n")
     for product in plan["products"]:

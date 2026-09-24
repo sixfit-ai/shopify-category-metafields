@@ -75,7 +75,11 @@ def restore_operations(backup, plan, extra_gids=()):
         # Which keys to restore. A product the current plan still describes
         # contributes its own keys; one carried over from the checkpoint has no
         # plan entry any more, so every key the backup holds is restored.
-        keys = {m["key"] for m in (planned or {}).get("metafields") or []}
+        # Only keys the run actually wrote. A plan entry with no values is a
+        # "left empty" or fully-rejected attribute that was never sent, and
+        # clearing it here would CREATE an empty metafield that never existed.
+        keys = {m["key"] for m in (planned or {}).get("metafields") or []
+                if m.get("values")}
         if gid in extra_gids:
             keys |= set(before)
         if not keys:

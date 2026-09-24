@@ -25,9 +25,27 @@ Use only these, in this order of trust:
 2. **Product type** and **title**.
 3. **Description** — real statements only. "Soft cotton tee" tells you the
    fabric; "feels amazing" tells you nothing.
+4. **Product images**, when you can see them. An image is legitimate evidence
+   for what it actually shows: a plainly single-coloured garment supports
+   `Solid` for pattern; a visible stripe supports `Striped`. It is not evidence
+   for anything the image cannot show, such as fabric or care instructions.
 
 If the product does not say, do not guess. Leaving an attribute empty is a
 correct answer, and far better than a wrong value.
+
+## Colour needs a pattern
+
+`shopify.color-pattern` is one metafield fed by TWO taxonomy attributes,
+`color` and `pattern`, and Shopify requires **both** when a new colour entry has
+to be created. Proposing `color` alone for a value this store does not already
+have will block that value: the plan will not invent a pattern for you.
+
+So when you propose a `color` the store lacks, propose a `pattern` for the same
+product too, with its own evidence. `Solid` is the common answer for plain
+garments — but only say so when the description, the option values or an image
+actually shows a plain garment. If nothing supports a pattern, leave both out
+and let the value stay blocked; a blocked value is reported, a fabricated one is
+a defect.
 
 ## Recording your reasoning
 

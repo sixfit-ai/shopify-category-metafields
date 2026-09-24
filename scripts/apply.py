@@ -80,15 +80,21 @@ def doc_metaobjects(batch):
         value = record["taxonomy_value"]
         if record.get("reference_is_list"):
             value = json.dumps([value])
-        variables[var] = {
-            "type": record["metaobject_type"],
+        fields = [
             # Label is the English taxonomy name. Existing entries in other
             # languages are never renamed; see the plan's label warnings.
-            "fields": [
-                {"key": "label", "value": record["label"]},
-                {"key": reference, "value": value},
-            ],
-        }
+            {"key": "label", "value": record["label"]},
+            {"key": reference, "value": value},
+        ]
+        # Types with more than one REQUIRED taxonomy reference need the others
+        # too: shopify--color-pattern refuses a colour without a Base pattern.
+        # build_plan.py resolved these from the merchant's own proposal.
+        for companion in record.get("companions") or []:
+            companion_value = companion["value_id"]
+            if companion.get("is_list"):
+                companion_value = json.dumps([companion_value])
+            fields.append({"key": companion["field"], "value": companion_value})
+        variables[var] = {"type": record["metaobject_type"], "fields": fields}
     return ("mutation CreateMetaobjects(%s) {\n%s\n}"
             % (", ".join(decls), "\n".join(body)), variables)
 

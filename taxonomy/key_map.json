@@ -1,6 +1,6 @@
 {
  "_authority": "This file is a starting point, not the final word. At run time the store's own metafieldDefinitions(namespace: \"shopify\") are authoritative, and each definition's validations.metaobject_definition_id gives the metaobject definition to resolve values against. Reconcile against the store before writing anything.",
- "_generated": "2026-09-24T08:19:16Z",
+ "_generated": "2026-09-24T09:02:12Z",
  "_generator": "scripts/build_key_map.py",
  "_namespace": "shopify",
  "_note": "Generated. Edit taxonomy/key_exceptions.json, then re-run.",
@@ -8507,6 +8507,9 @@
   "zipper-teeth-type": "zipper-teeth-type",
   "zoom-type": "zoom-type"
  },
+ "companion_only_attributes": {
+  "pattern": "color-pattern"
+ },
  "multi_attribute_keys": {
   "color-pattern": [
    "color",
@@ -8516,5 +8519,8 @@
  "out_of_scope_keys": [
   "disclosure",
   "unavailable_reason"
- ]
+ ],
+ "primary_attribute": {
+  "color-pattern": "color"
+ }
 }

@@ -275,6 +275,14 @@ values are restored exactly, but a metafield that did not exist before the run
 is left present-and-empty rather than absent. `rollback.py` now emits the empty
 clear and warns about the residue instead of emitting a delete that fails.
 
+### Future improvement — a custom app with delete scope
+
+This limit is a property of the connector, not of Shopify. A custom app granted
+`write_metafields` for the `shopify` namespace on products would be able to call
+`metafieldsDelete` and make rollback byte-exact. Worth doing if exact restoration
+ever becomes a hard requirement; until then the empty-list clear is the ceiling,
+and the run report must say so.
+
 ## 2. Setting a category makes other apps write
 
 After the two categories were set, both products gained a metafield this skill
@@ -312,3 +320,84 @@ already-applied category actions into `keep`, so rollback computed zero
 categories to restore. The checkpoint now accumulates `touched_products` across
 re-plans, and rollback restores the category of anything the run touched
 regardless of what the latest plan says.
+
+---
+
+# Is an empty `[]` metafield harmless? (verified 2026-09-24)
+
+The claim needed testing, because rollback leaves these behind. Tested against
+the live Pancake store using the residue from the pilot run.
+
+## Admin API — VERIFIED harmless
+
+An absent metafield and an emptied one are distinguishable, but the emptied one
+carries nothing:
+
+```
+absent :  product.metafield(namespace:"shopify", key:"neckline")  ->  null
+emptied:  product.metafield(namespace:"shopify", key:"size")      ->  { value: "[]",
+                                                                        references: null }
+populated:                                                        ->  { value: "[...]",
+                                                                        references: {nodes:[...]} }
+```
+
+`references` is **null**, not an empty list. Anything consuming references —
+which is how every renderer and exporter reads a `list.metaobject_reference` —
+sees nothing at all.
+
+## Automatic collections — VERIFIED cannot be affected
+
+```
+metafieldDefinition(shopify.size).capabilities.smartCollectionCondition.enabled = false
+metafieldDefinition(shopify.size).capabilities.adminFilterable.enabled          = false
+```
+
+Category metafields are not usable as automatic-collection conditions on this
+store, so an empty one cannot pull a product into or out of a collection.
+
+## Storefront filters — NOT APPLICABLE on this store, DOĞRULANAMADI in general
+
+The live storefront's collection page offers only **Beschikbaarheid**
+(availability) and **Prijs** (price). No metafield-backed filter is configured,
+so an empty category metafield changes nothing here. Whether a store that HAS
+configured a Size or Colour filter would render an empty value as a blank facet
+is **DOĞRULANAMADI** — it could not be tested without such a filter configured.
+The definition's `storefront: PUBLIC_READ` access means the empty metafield IS
+readable by the Storefront API, so a theme that renders the field without
+checking for emptiness could show a blank row.
+
+## Admin product page — DOĞRULANAMADI
+
+Not verified. Reaching the admin product page requires signing in to Shopify
+admin, and entering credentials is out of scope. The expected behaviour is that
+the field appears in the product's Metafields section with no value selected —
+the same as any defined-but-unset metafield — but this was not observed.
+
+## Google / Meta feeds — DOĞRULANAMADI
+
+Not verified. The feeds are generated inside the Google and Meta channel apps
+and are not readable through the Admin API. Since `references` resolves to null,
+an exporter reading references would see no value; an exporter reading the raw
+`value` string would see the literal `[]`. Which of those the channel apps do
+was not determined.
+
+## One thing that was NOT harmless, and is now fixed
+
+An empty metafield counts as a SET metafield to `metafieldsCount`, and — more
+importantly — the planner initially treated it as `already_set` under
+`overwrite_existing_metafields: false`. The residue of one rolled-back run would
+therefore have permanently blocked the next run from filling that attribute.
+`build_plan.py` now treats `[]`, `""` and `null` as unset.
+
+## Updated acceptance criterion
+
+> Rollback restores every category and every `shopify.*` category metafield
+> **value** exactly, restores a category back to none where there was none, and
+> deletes every metaobject the run created. A metafield that did **not exist**
+> before the run is left present with an empty value rather than removed,
+> because `metafieldsDelete` is refused on the `shopify` namespace for this
+> connector. An emptied metafield resolves to no references, cannot drive an
+> automatic collection, and is treated as unset by later runs. Side effects
+> written by other apps in response to a category change — such as
+> `mc-facebook.google_product_category` — are outside the skill's scope and are
+> not reverted.

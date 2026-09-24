@@ -184,8 +184,37 @@ Also read out the **label mismatch** warnings. If this store calls a size
 `0-3 maanden` and the taxonomy calls it `0-3 months`, the existing entry is
 reused as-is. Nothing is renamed or translated.
 
+### Tell the merchant these two things before they approve
+
+Both were observed on a live store. Say them plainly; neither is a reason not
+to proceed, but a merchant who hears them afterwards will feel misled.
+
+> **Two things to know before I start.**
+>
+> First, setting a product's category can make your other connected apps update
+> their own data. On this store the Facebook & Instagram channel added its own
+> "Google product category" field to the products I categorised. That is that
+> app doing its job, but it is outside what I manage — if you later undo my
+> changes, those fields stay.
+>
+> Second, my undo is not quite perfect. I can put every value back exactly as it
+> was, and I can put the category back to exactly what it was, including back to
+> having none. But if I add a product detail that did not exist at all before,
+> undoing empties it rather than removing it — Shopify does not let me delete
+> those fields through this connection. An emptied field holds nothing and
+> behaves as unset; it just still appears in your product's field list.
+
 **Require an explicit yes.** Iterate on the proposals and re-run
 `build_plan.py`; never hand-edit the plan.
+
+### Category changes need their own yes
+
+`plan.md` opens with a **Category changes** section listing every product whose
+category this run would change, old path and new path side by side. A changed
+category is the single most visible thing this skill does — it moves the product
+in Shopify's own taxonomy and in every channel that reads it. Walk that section
+separately and get a separate yes for it, even when the merchant has already
+approved the rest of the plan.
 
 ---
 
@@ -265,9 +294,15 @@ python3 scripts/rollback.py --current-products work/now_products.json \
     --current-store-map work/now_store.json
 ```
 
-It restores metafields (deleting ones that did not exist before), restores
-categories including back to none, deletes the metaobjects this run created,
-and — only then — considers definitions.
+It restores metafields, restores categories including back to none, deletes
+the metaobjects this run created, and — only then — considers definitions.
+
+**A metafield that did not exist before the run is emptied, not removed.**
+`metafieldsDelete` is refused on the `shopify` namespace for this connector
+("Access to this namespace and key on Metafields for this resource type is not
+allowed"), so rollback writes `[]` instead. The field holds no values and
+resolves to no references, but the row remains. Say so when you report the
+rollback; do not claim the store is byte-identical when it is not.
 
 **A metaobject definition is deleted only when all three hold:**
 

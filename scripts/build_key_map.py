@@ -56,6 +56,16 @@ def build(index, exceptions):
 
     multi = {k: sorted(v) for k, v in key_to_attributes.items() if len(v) > 1}
 
+    # For a collapsed key, only ONE attribute contributes values to the
+    # metafield; the others exist to fill required companion fields inside the
+    # metaobject. Without this the key would be written once per attribute.
+    companion_only = {}
+    primary_attribute = {}
+    for key, spec in collapsed.items():
+        primary_attribute[key] = spec["primary"]
+        for handle in spec.get("companion_only") or []:
+            companion_only[handle] = key
+
     return {
         "_generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_generator": "scripts/build_key_map.py",
@@ -65,6 +75,8 @@ def build(index, exceptions):
         "_authority": exceptions["_authority"],
         "out_of_scope_keys": exceptions["not_category_metafields"]["keys"],
         "multi_attribute_keys": multi,
+        "primary_attribute": primary_attribute,
+        "companion_only_attributes": companion_only,
         "attribute_to_key": attribute_to_key,
     }
 
@@ -85,6 +97,7 @@ def main():
             sys.exit("missing %s - run without --check" % OUT)
         current = load_json(OUT)
         drift = [k for k in ("attribute_to_key", "multi_attribute_keys",
+                             "primary_attribute", "companion_only_attributes",
                              "out_of_scope_keys", "_taxonomy_version")
                  if current.get(k) != built[k]]
         if drift:
