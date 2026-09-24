@@ -3,7 +3,7 @@
 
 The upstream release asset is ~4 MB gzipped and ~91 MB expanded, which is far
 too large to commit. This script downloads one pinned release, keeps only what
-the skill actually needs, and writes a slim index that IS committed.
+the skill actually needs, and writes a slim index that IS committed, gzipped.
 
 What the skill needs, and nothing else:
   * category id -> name, full name, parent, leaf flag, attribute handles
@@ -23,7 +23,7 @@ Usage
     python3 scripts/build_taxonomy_index.py --verticals aa,ae   # smaller index
 
 Re-running with a new --version is the ONLY supported way to change the
-index. Never hand-edit taxonomy/index.json.
+index. Never hand-edit taxonomy/index.json.gz.
 """
 
 import argparse
@@ -44,7 +44,7 @@ URL_TEMPLATE = (
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-INDEX_PATH = os.path.join(ROOT, "taxonomy", "index.json")
+INDEX_PATH = os.path.join(ROOT, "taxonomy", "index.json.gz")
 
 
 def download(url, dest):
@@ -176,7 +176,8 @@ def main():
     }
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, "w", encoding="utf-8") as handle:
+    # Committed gzipped: ~12.4 MB of JSON compresses to ~1.6 MB.
+    with gzip.open(args.out, "wt", encoding="utf-8", compresslevel=9) as handle:
         json.dump(index, handle, ensure_ascii=False, sort_keys=True,
                   separators=(",", ":"))
         handle.write("\n")
@@ -189,7 +190,7 @@ def main():
     print("  categories : %d (%d leaf)" % (len(categories), leaves))
     print("  attributes : %d" % len(attributes))
     print("  values     : %d" % values)
-    print("  size       : %.1f MB" % (size / 1e6))
+    print("  size       : %.1f MB gzipped" % (size / 1e6))
 
 
 if __name__ == "__main__":

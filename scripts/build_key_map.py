@@ -28,11 +28,11 @@ import os
 import sys
 from datetime import datetime, timezone
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
-INDEX = os.path.join(ROOT, "taxonomy", "index.json")
-EXCEPTIONS = os.path.join(ROOT, "taxonomy", "key_exceptions.json")
-OUT = os.path.join(ROOT, "taxonomy", "key_map.json")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _common import KEY_EXCEPTIONS, KEY_MAP, load_index, load_json  # noqa: E402
+
+EXCEPTIONS = KEY_EXCEPTIONS
+OUT = KEY_MAP
 
 
 def build(index, exceptions):
@@ -76,14 +76,14 @@ def main():
                         help="verify the committed map is current; write nothing")
     args = parser.parse_args()
 
-    index = json.load(open(INDEX, encoding="utf-8"))
-    exceptions = json.load(open(EXCEPTIONS, encoding="utf-8"))
+    index = load_index()
+    exceptions = load_json(EXCEPTIONS)
     built = build(index, exceptions)
 
     if args.check:
         if not os.path.exists(OUT):
             sys.exit("missing %s - run without --check" % OUT)
-        current = json.load(open(OUT, encoding="utf-8"))
+        current = load_json(OUT)
         drift = [k for k in ("attribute_to_key", "multi_attribute_keys",
                              "out_of_scope_keys", "_taxonomy_version")
                  if current.get(k) != built[k]]

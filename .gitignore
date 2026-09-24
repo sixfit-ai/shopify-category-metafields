@@ -11,3 +11,4 @@ prompts/
 
 __pycache__/
 *.pyc
+taxonomy/index.json

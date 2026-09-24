@@ -1,0 +1,32 @@
+{
+  "_note": "Run configuration. Copy and tune per store if needed.",
+
+  "no_match_behavior": "leave_empty",
+  "_no_match_behavior": "What to do when no allowed taxonomy value matches the product. 'leave_empty' (default) writes nothing for that attribute and reports it. 'use_default' writes the value named in defaults_by_attribute, and reports that a default was used. A default is only honoured when it is itself an allowed value of that attribute.",
+
+  "defaults_by_attribute": {
+    "_note": "Only consulted when no_match_behavior is 'use_default'. Keyed by taxonomy attribute handle; the value is the taxonomy value NAME as it appears in the index.",
+    "_example": { "target-gender": "Unisex" }
+  },
+
+  "status_scope": ["ACTIVE", "DRAFT"],
+  "_status_scope": "Product statuses to include. Archived products are excluded by default.",
+
+  "keep_existing_category": true,
+  "_keep_existing_category": "When true, a product that already has a category keeps it unless the proposal explicitly overrides it with a reason.",
+
+  "overwrite_existing_metafields": false,
+  "_overwrite_existing_metafields": "When false, an attribute that already has a value on the product is left alone and reported as 'already_set'. When true, a proposal may replace it.",
+
+  "batch_size": 25,
+  "_batch_size": "Aliased operations per graphql_mutation call.",
+
+  "enable_missing_definitions": false,
+  "_enable_missing_definitions": "standardMetafieldDefinitionEnable changes store-wide configuration, not one product. It is never called automatically. When a plan needs a definition that does not exist, the plan lists it in its own section for explicit approval; this flag only records that approval was given.",
+
+  "create_missing_metaobjects": true,
+  "_create_missing_metaobjects": "Whether the plan may propose creating metaobject entries for taxonomy values the store does not have yet. These are always listed in their own plan section and approved separately.",
+
+  "metaobject_label_language": "taxonomy_english",
+  "_metaobject_label_language": "Labels for metaobjects this skill creates come from the English taxonomy name. Existing entries in other languages are never translated or renamed; they are reported as a language mismatch warning."
+}
