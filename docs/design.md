@@ -1,7 +1,7 @@
 # Design — shopify-category-metafields
 
 Phase 1 output. No product writes have been made. This records what was
-verified against the Admin API and the Pancake Clothing dev store, and the
+verified against the Admin API and a clothing development store, and the
 design that follows from it.
 
 ## What this skill does
@@ -20,11 +20,11 @@ taxonomy index            attribute.values[].id      gid://shopify/TaxonomyValue
                                    |
                                    |  match on metaobject field `taxonomy_reference`
                                    v
-store metaobject          shopify--neckline/crew     gid://shopify/Metaobject/508541436231
+store metaobject          shopify--neckline/crew     gid://shopify/Metaobject/<neckline-crew>
                                    |
                                    |  metaobject id goes into the metafield value
                                    v
-product metafield         shopify.neckline           ["gid://shopify/Metaobject/508541436231"]
+product metafield         shopify.neckline           ["gid://shopify/Metaobject/<neckline-crew>"]
                           type: list.metaobject_reference
 ```
 
@@ -32,7 +32,7 @@ Three consequences:
 
 1. **Values must be resolved per store, at run time.** The metaobject ids are
    store-local. They cannot be baked into the committed index.
-2. **Match on `taxonomy_reference`, never on `label`.** Pancake's size entries
+2. **Match on `taxonomy_reference`, never on `label`.** the test store's size entries
    are Dutch (`0-3-maanden`, `2-3-jaar`); their labels do not equal the English
    taxonomy names, but their `taxonomy_reference` does resolve correctly.
 3. **A value with no metaobject entry cannot be written until one exists.**
@@ -51,7 +51,7 @@ Three consequences:
 Creates new entries, updates existing entries, and deletes existing entries
 that aren't included in the mutation's input. Common examples of list fields
 include collections, metafields, and variants."* Using it would silently delete
-every metafield not named in the input — on Pancake that is the entire `sixfit`
+every metafield not named in the input — on the test store that is the entire `sixfit`
 and `mc-facebook` namespaces.
 
 **`productUpdate` is allowed only for the `category` field.** The tag skill's
@@ -59,7 +59,7 @@ rule against `productUpdate` exists because `ProductInput.tags` replaces the
 whole tag list. That hazard is specific to the `tags` field, not the mutation.
 This skill never sends `tags`.
 
-## Definition bootstrap (verified 2026-09-24 on Pancake)
+## Definition bootstrap (verified 2026-09-24 on the test store)
 
 A store that has never used a given category metafield has neither the metafield
 definition nor the metaobject definition. Test: `shopify.size-type` existed as
@@ -68,9 +68,9 @@ neither.
 ```
 standardMetafieldDefinitionEnable(namespace: "shopify", key: "size-type",
                                   ownerType: PRODUCT)
-  -> created MetafieldDefinition/458666934599
+  -> created MetafieldDefinition/<created>
      type: list.metaobject_reference
-     validations: metaobject_definition_id = MetaobjectDefinition/40267120967
+     validations: metaobject_definition_id = MetaobjectDefinition/<created>
 ```
 
 The metaobject definition `shopify--size-type` was **auto-provisioned** by that
@@ -95,7 +95,7 @@ Bootstrap order for a virgin store is therefore:
 `metaobjectDefinitionDelete` **is** permitted, and per Shopify's docs deleting a
 metaobject definition also deletes its metaobjects and the associated metafield
 definitions. That is the only available undo, and it is what reverted the test:
-deleting `MetaobjectDefinition/40267120967` removed the `shopify.size-type`
+deleting `MetaobjectDefinition/<created>` removed the `shopify.size-type`
 metafield definition with it, restoring the store exactly.
 
 Rollback must therefore undo definitions via `metaobjectDefinitionDelete`, and
@@ -110,17 +110,17 @@ exactly, so the backup covers four things, not one.
 ```json
 {
   "_taken": "2026-09-24T10:00:00Z",
-  "_shop": "pancakeclothing.com",
+  "_shop": "example-store.myshopify.com",
   "_taxonomy_version": "2026-08",
 
   "products": {
-    "gid://shopify/Product/10945977581895": {
-      "title": "Pancake Mama Duck",
+    "gid://shopify/Product/<product-1>": {
+      "title": "a sample t-shirt",
       "category": "gid://shopify/TaxonomyCategory/aa-1-13-8",
       "metafields": {
         "shopify.neckline": {
           "type": "list.metaobject_reference",
-          "value": "[\"gid://shopify/Metaobject/508541436231\"]"
+          "value": "[\"gid://shopify/Metaobject/<neckline-crew>\"]"
         },
         "shopify.size": { "type": "...", "value": "..." }
       }
@@ -128,7 +128,7 @@ exactly, so the backup covers four things, not one.
   },
 
   "preexisting_metaobjects": {
-    "shopify--neckline": ["gid://shopify/Metaobject/508541436231"]
+    "shopify--neckline": ["gid://shopify/Metaobject/<neckline-crew>"]
   },
 
   "preexisting_definitions": {
@@ -215,7 +215,7 @@ rather than hardcoding `taxonomy_reference`.
 
 ## Round-trip verification (read direction)
 
-Resolving every category metafield on *Pancake Mama Duck* back through the
+Resolving every category metafield on *a sample t-shirt* back through the
 committed index: **11 of 11 resolved, 0 unresolved** (`color-pattern` handled
 separately, per above).
 
@@ -235,7 +235,7 @@ taxonomy value ids, never labels.
 1. **Metafield key for an extended attribute.** Whether a category using
    `applique-shape` writes to `shopify.applique-shape` or to
    `shopify.applique-patch-shape` is not confirmed. No test category was
-   available on Pancake. The index carries both handles so either resolution is
+   available on the test store. The index carries both handles so either resolution is
    possible; resolve by reading the store's definitions before writing.
 
 2. **Whether `standardMetafieldDefinitionEnable` is appropriate to call
@@ -245,14 +245,14 @@ taxonomy value ids, never labels.
 
 3. **Value coverage for a large catalog.** Resolving values requires reading
    every existing metaobject per type. For types with many entries this needs
-   pagination; no limit problems were observed at Pancake's scale (max 24
+   pagination; no limit problems were observed at that store's scale (max 24
    entries) but it is untested at scale.
 
 ---
 
 # Phase 3 pilot — live run findings (2026-09-24)
 
-A two-product pilot (PROBE D, PROBE G) was run end to end against Pancake
+A two-product pilot was run end to end against the test store
 Clothing: backup → create 7 metaobjects → set 2 categories → set 5 metafields →
 rollback. Everything the skill itself writes was restored. Two things were not,
 and both are limits of the environment rather than bugs in the plan.
@@ -289,8 +289,8 @@ After the two categories were set, both products gained a metafield this skill
 never wrote:
 
 ```
-mc-facebook.google_product_category = "212"   (PROBE D)
-mc-facebook.google_product_category = "5410"  (PROBE G)
+mc-facebook.google_product_category = "212"   (sample product A)
+mc-facebook.google_product_category = "5410"  (sample product B)
 ```
 
 The Meta/Facebook channel app reacted to the category change and wrote its own
@@ -326,7 +326,7 @@ regardless of what the latest plan says.
 # Is an empty `[]` metafield harmless? (verified 2026-09-24)
 
 The claim needed testing, because rollback leaves these behind. Tested against
-the live Pancake store using the residue from the pilot run.
+the live the test store store using the residue from the pilot run.
 
 ## Admin API — VERIFIED harmless
 

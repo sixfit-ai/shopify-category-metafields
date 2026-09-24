@@ -74,8 +74,8 @@ Never violate these.
 1. `get-shop-info`. Confirm which store is connected and its product count.
 2. State it back, with the scope, and stop:
 
-   > You're connected to **Pancake Clothing** (pancakeclothing.com), which has
-   > **12 products**.
+   > You're connected to **Northwind Apparel** (northwind-apparel.example), which
+   > has **248 products**.
    >
    > I'll work on your active and draft products and skip archived ones. I'll
    > set each product's category and fill in the product details that category
@@ -210,8 +210,8 @@ to proceed, but a merchant who hears them afterwards will feel misled.
 > **Two things to know before I start.**
 >
 > First, setting a product's category can make your other connected apps update
-> their own data. On this store the Facebook & Instagram channel added its own
-> "Google product category" field to the products I categorised. That is that
+> their own data. On a store we tested, the Facebook & Instagram channel added
+> its own "Google product category" field to every product we categorised. That is that
 > app doing its job, but it is outside what I manage — if you later undo my
 > changes, those fields stay.
 >
@@ -365,14 +365,14 @@ metaobject GIDs. There is no way to write the string "Crew".
 
 ### Entries do not pre-exist
 
-A store can have 1 neckline entry where the taxonomy has 18. Enabling a standard
+A store can have one neckline entry where the taxonomy has eighteen. Enabling a standard
 definition provisions the metaobject definition but creates **zero** entries.
 Anything not already there must be created.
 
 ### Match on taxonomy value, never on label
 
-Store labels are merchant-authored and often localised. Pancake's sizes are
-Dutch (`0-3 maanden`). The `taxonomy_reference` field still resolves correctly;
+Store labels are merchant-authored and often localised. a Dutch store's sizes read
+`0-3 maanden`. The `taxonomy_reference` field still resolves correctly;
 the label does not. Never match on the label, and never rename one.
 
 ### The reference field is not always called `taxonomy_reference`

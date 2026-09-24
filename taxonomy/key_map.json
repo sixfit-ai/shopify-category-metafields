@@ -1,6 +1,6 @@
 {
  "_authority": "This file is a starting point, not the final word. At run time the store's own metafieldDefinitions(namespace: \"shopify\") are authoritative, and each definition's validations.metaobject_definition_id gives the metaobject definition to resolve values against. Reconcile against the store before writing anything.",
- "_generated": "2026-09-24T09:02:12Z",
+ "_generated": "2026-09-24T09:38:43Z",
  "_generator": "scripts/build_key_map.py",
  "_namespace": "shopify",
  "_note": "Generated. Edit taxonomy/key_exceptions.json, then re-run.",

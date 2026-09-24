@@ -77,9 +77,15 @@ Rebuild the bundle first if any of `SKILL.md`, `scripts/`, `taxonomy/`,
 
 ## 5. Before flipping visibility
 
-- `docs/design.md` names the test store, `pancakeclothing.com`, and quotes real
-  product titles and metaobject ids from it. Confirm that is acceptable in
-  public, or scrub it.
+- `docs/design.md` has been scrubbed: the store domain, product titles and
+  store-local metaobject ids are placeholders. Taxonomy ids are deliberately
+  kept — they are public Shopify data and identical in every store. Re-check
+  with:
+  ```
+  git ls-files | xargs grep -niE 'myshopify|gid://shopify/(Product|Metaobject)/[0-9]'
+  ```
+- `docs/video-shoot.md` is a recording runbook that names the dev store. Delete
+  it before going public, or scrub it the same way.
 - `work/` is gitignored and has never been committed — verify with
   `git log --all --name-only -- work/ | head`, which should print nothing.
 - The README's Known limits section describes real connector behaviour. Keep it:

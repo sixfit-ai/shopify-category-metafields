@@ -258,7 +258,11 @@ class Planner:
             "category": {
                 "action": category_action,
                 "from": current,
-                "from_name": product.get("category_full_name"),
+                # A catalog read can come back without fullName; the index has
+                # it, and a blank "before" path in the plan is unreadable.
+                "from_name": (product.get("category_full_name")
+                              or (self.index["categories"].get(current) or {})
+                              .get("full_name") or ""),
                 "to": chosen,
                 "to_name": category["full_name"],
                 "reason": proposal.get("category_reason", ""),
@@ -502,7 +506,10 @@ def write_md(path, plan):
             add("\nWhy: %s\n" % reason)
 
         writable = [m for m in product["metafields"] if m["values"]]
-        empty = [m for m in product["metafields"] if not m["values"]]
+        companions = [m for m in product["metafields"]
+                      if m.get("action") == "companion_only"]
+        empty = [m for m in product["metafields"]
+                 if not m["values"] and m.get("action") != "companion_only"]
         if writable:
             add("")
             add("| Metafield | Value | From | Status |")
@@ -523,6 +530,11 @@ def write_md(path, plan):
             for metafield in empty:
                 add("- `shopify.%s` — left empty (%s)"
                     % (metafield["key"], metafield.get("note", "")))
+        if companions:
+            add("")
+            for metafield in companions:
+                add("- `%s` — feeds `shopify.%s`; it has no metafield of its own"
+                    % (metafield["attribute"], metafield["key"]))
         add("")
 
     if plan["new_metaobjects"]:

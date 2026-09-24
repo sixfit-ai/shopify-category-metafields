@@ -10,7 +10,7 @@
         "pattern"
       ],
       "metaobject_type": "shopify--color-pattern",
-      "evidence": "Pancake Clothing product metafield shopify.color-pattern; its metaobject carries both color_taxonomy_reference (list) and pattern_taxonomy_reference (single).",
+      "evidence": "Observed on a live store: the product metafield shopify.color-pattern resolves to metaobjects of type shopify--color-pattern, and that metaobject carries both color_taxonomy_reference (list) and pattern_taxonomy_reference (single).",
       "primary": "color",
       "companion_only": [
         "pattern"
