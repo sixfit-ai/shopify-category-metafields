@@ -1,0 +1,13 @@
+# Per-run working state, never committed
+work/
+
+# Upstream taxonomy release asset (91 MB expanded). Fetched on demand by
+# scripts/build_taxonomy_index.py; only the generated index is committed.
+taxonomy-*.json.gz
+taxonomy.en.json*
+
+# Generated category prompts (Phase 2) - reproducible from the index
+prompts/
+
+__pycache__/
+*.pyc
