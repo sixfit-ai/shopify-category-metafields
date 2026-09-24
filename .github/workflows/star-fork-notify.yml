@@ -1,0 +1,41 @@
+name: Star and fork notifications
+
+on:
+  watch:
+    types: [started]
+  fork:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Slack message
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          EVENT_NAME: ${{ github.event_name }}
+          SENDER_LOGIN: ${{ github.event.sender.login }}
+          SENDER_URL: ${{ github.event.sender.html_url }}
+          REPO: ${{ github.repository }}
+          STARS: ${{ github.event.repository.stargazers_count }}
+        run: |
+          jq -n \
+            --arg event "$EVENT_NAME" \
+            --arg login "$SENDER_LOGIN" \
+            --arg url "$SENDER_URL" \
+            --arg repo "$REPO" \
+            --arg stars "$STARS" \
+            '(if $event == "fork" then "New fork" else "New star" end) as $title
+             | (if $event == "fork" then " forked " else " starred " end) as $verb
+             | {text: ($title + "\n\n"
+                       + "<" + $url + "|" + $login + ">" + $verb + $repo + ".\n"
+                       + "Total stars: " + $stars)}' \
+            > payload.json
+
+          curl -sS --fail-with-body -X POST \
+            -H 'Content-type: application/json' \
+            --data @payload.json \
+            "$SLACK_WEBHOOK_URL"

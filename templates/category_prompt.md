@@ -25,10 +25,13 @@ Use only these, in this order of trust:
 2. **Product type** and **title**.
 3. **Description** — real statements only. "Soft cotton tee" tells you the
    fabric; "feels amazing" tells you nothing.
-4. **Product images**, when you can see them. An image is legitimate evidence
-   for what it actually shows: a plainly single-coloured garment supports
-   `Solid` for pattern; a visible stripe supports `Striped`. It is not evidence
-   for anything the image cannot show, such as fabric or care instructions.
+4. **The product image**, downloaded to `work/images/<product id>.png` by
+   `scripts/fetch_images.py`. **Open the file and look at it.** An image is
+   legitimate evidence for what it actually shows: a plainly single-coloured
+   garment supports `Solid` for pattern; a visible stripe supports `Striped`.
+   It is not evidence for anything the image cannot show, such as fabric, care
+   instructions or stretch level. Never treat a filename or alt text as having
+   seen the picture.
 
 If the product does not say, do not guess. Leaving an attribute empty is a
 correct answer, and far better than a wrong value.

@@ -104,6 +104,13 @@ as untouched. Save each page, then:
 python3 scripts/normalize_catalog.py work/raw_products.json --stats
 ```
 
+**The images.** Some attributes are only ever stated by the picture — `pattern`
+above all. Fetch them now so they can be looked at in Phase 2:
+
+```
+python3 scripts/fetch_images.py
+```
+
 **The store.** The store, not the taxonomy file, decides what is writable today.
 
 ```
@@ -151,6 +158,17 @@ Read, in this order of trust:
 2. **Product type** and **title**.
 3. **Description** — real statements only. "Soft cotton tee" gives you the
    fabric; "feels amazing" gives you nothing.
+4. **The product image**, at `work/images/<product id>.png`. **Open it and look
+   at it** — do not infer from the filename or the alt text. A photo is evidence
+   for what it shows: whether a garment is plain, striped or floral, and
+   sometimes its colour. It is never evidence for fabric, care instructions or
+   stretch level. Record what you saw: `product image shows a plain unpatterned
+   garment`.
+
+**`pattern` in particular usually has no textual source.** Descriptions almost
+never say "solid". If you are proposing a colour the store does not stock yet,
+you need a pattern too (see below), and the image is normally the only honest
+place to get it. If the image does not settle it, leave both out.
 
 Rules:
 

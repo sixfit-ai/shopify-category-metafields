@@ -1,0 +1,90 @@
+name: Download tracker
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out state branch
+        uses: actions/checkout@v4
+        with:
+          ref: download-stats
+
+      - name: Fetch current download counts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq '[.[] | .tag_name as $tag | .assets[]
+                   | {key: ($tag + " / " + .name), value: .download_count}] | from_entries' \
+            > current.json
+          echo "current counts:"
+          cat current.json
+
+      - name: Compare against previous snapshot
+        id: diff
+        run: |
+          [ -f previous.json ] || echo '{}' > previous.json
+
+          jq -n \
+            --argjson prev "$(cat previous.json)" \
+            --argjson cur "$(cat current.json)" \
+            '[ $cur | to_entries[]
+               | ($prev[.key] // 0) as $before
+               | select(.value > $before)
+               | {name: .key, delta: (.value - $before), total: .value} ]' \
+            > increases.json
+
+          echo "count=$(jq 'length' increases.json)" >> "$GITHUB_OUTPUT"
+          echo "grand_total=$(jq '[to_entries[].value] | add // 0' current.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Report no new downloads
+        if: steps.diff.outputs.count == '0'
+        run: echo "No new downloads."
+
+      - name: Notify Slack
+        if: steps.diff.outputs.count != '0'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GRAND_TOTAL: ${{ steps.diff.outputs.grand_total }}
+        run: |
+          jq -n \
+            --argjson increases "$(cat increases.json)" \
+            --arg grand "$GRAND_TOTAL" \
+            --arg repo "${{ github.repository }}" \
+            '{text: ("New downloads: " + $repo + "\n\n"
+                     + ($increases
+                        | map("- " + .name + ": +" + (.delta | tostring)
+                              + " (new total " + (.total | tostring) + ")")
+                        | join("\n"))
+                     + "\n\nTotal downloads across all assets: " + $grand)}' \
+            > payload.json
+
+          curl -sS --fail-with-body -X POST \
+            -H 'Content-type: application/json' \
+            --data @payload.json \
+            "$SLACK_WEBHOOK_URL"
+
+      - name: Save snapshot
+        run: |
+          mv current.json previous.json
+          rm -f increases.json payload.json
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add previous.json
+
+          if git diff --cached --quiet; then
+            echo "Snapshot unchanged, skipping commit."
+          else
+            git commit -m "chore: update download counter state"
+            git push
+          fi

@@ -12,6 +12,9 @@ The query to run, paged until pageInfo.hasNextPage is false:
           id title descriptionHtml productType vendor status
           options { name values }
           category { id fullName isLeaf }
+          media(first: 5) {
+            nodes { ... on MediaImage { alt image { url width height } } }
+          }
           metafields(first: 50) {
             nodes { namespace key type value }
           }
@@ -61,6 +64,21 @@ def strip_html(html):
     return re.sub(r"\s+", " ", "".join(stripper.parts)).strip()
 
 
+def images_of(product):
+    """Image URLs, so a visual attribute can be judged from the actual photo.
+
+    Pattern and colour are often only stated by the picture. The flow downloads
+    these with fetch_images.py and the model looks at them; without the URLs
+    here there is nothing to look at, and `pattern` would have to be guessed.
+    """
+    found = []
+    for node in unwrap(product.get("media") or {}, "media") or []:
+        image = node.get("image") or {}
+        if image.get("url"):
+            found.append({"url": image["url"], "alt": node.get("alt") or ""})
+    return found
+
+
 def normalize(product, out_of_scope_keys):
     category = product.get("category") or {}
     options = [{"name": (o.get("name") or "").strip(),
@@ -90,6 +108,7 @@ def normalize(product, out_of_scope_keys):
         "status": (product.get("status") or "").strip(),
         "options": options,
         "option_names": [o["name"] for o in options],
+        "images": images_of(product),
         "category": category.get("id"),
         "category_full_name": category.get("fullName"),
         "category_is_leaf": category.get("isLeaf"),

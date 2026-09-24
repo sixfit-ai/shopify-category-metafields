@@ -38,14 +38,32 @@ Three things follow, and the skill is built around them:
   `0-3 maanden`. Matching goes through the taxonomy value, never the label, and
   nothing is ever renamed or translated.
 
+## What it does not do
+
+- **Tags.** Never read, never written. Tagging is
+  [shopify-tag-architect](https://github.com/sixfit-ai/shopify-tag-architect).
+- **Other apps' metafields.** Anything outside the `shopify` namespace —
+  `sixfit`, `mc-facebook`, your own — is reported as skipped and left alone.
+  `shopify.disclosure` and `shopify.unavailable_reason` are skipped too: they
+  sit in that namespace but are not category metafields.
+- **Invent values.** Every value comes from the pinned taxonomy. A value that is
+  not on the category's list is rejected, not rounded to the nearest match.
+- **Guess.** An attribute the product does not evidence is left empty and
+  reported. `no_match_behavior` can assign a configured default instead, but
+  only a default that is itself an allowed value.
+- **Enable store-wide settings on its own.** `standardMetafieldDefinitionEnable`
+  changes configuration for the whole store, so it is listed in the plan for
+  explicit approval and never called automatically.
+
 ## Safety
 
 - `productSet` is **never** used. It deletes list fields absent from its input,
   and metafields are a list field — one call would wipe other apps' namespaces.
 - `productUpdate` is used **only** for the `category` field, never with `tags`.
 - Nothing is written before a verified backup exists.
-- Rollback restores categories (including back to none), restores or deletes
-  metafields, and removes metaobjects this run created.
+- Rollback restores categories (including back to none), restores metafield
+  values exactly, and removes the metaobjects this run created. A metafield that
+  did not exist before is emptied rather than deleted — see Known limits.
 - A metaobject definition is deleted only if this run created it, it holds no
   entry from anyone else, and no product references it. Otherwise it is left in
   place and reported.
@@ -67,6 +85,7 @@ asset's SHA-256 in its header.
 
 ```
 normalize_catalog.py   reshape the fetched catalog
+fetch_images.py        download product photos, so `pattern` has real evidence
 build_store_map.py     what this store can write today
 build_prompts.py       one prompt per category, with allowed values
   → you choose categories and values → work/proposals.json
@@ -93,12 +112,43 @@ product, and reports it. `use_default` writes a value from
 `defaults_by_attribute`, but only when that value is itself allowed for the
 attribute.
 
+## Known limits
+
+Found by running this against a live store, not by reasoning about it. All three
+are properties of the environment; the skill reports each rather than hiding it.
+
+**Rollback empties, it cannot delete.** `metafieldsDelete` is refused on the
+`shopify` namespace for the Shopify MCP connector:
+
+> Access to this namespace and key on Metafields for this resource type is not
+> allowed.
+
+So a metafield that did not exist before a run is left present with an empty
+value (`[]`) rather than removed. Values are restored exactly; categories are
+restored exactly, including back to none. An emptied metafield resolves to no
+references and is treated as unset by later runs. A custom app with delete scope
+would close this gap — see `docs/design.md`.
+
+**Setting a category makes other apps write.** On the test store, categorising
+products caused the Meta channel app to add its own
+`mc-facebook.google_product_category` to eight of them. That is the app doing
+its job, it is outside this skill's namespace, and it is not reverted by
+rollback. The merchant is told this before approving.
+
+**Some values need a companion.** `shopify--color-pattern` requires both a base
+colour and a base pattern; Shopify rejects a colour entry without one ("Base
+pattern can't be blank"). When a new colour is needed, the plan also needs a
+pattern with its own evidence — usually the product photo. Without it the value
+is reported as blocked rather than invented.
+
 ## Status
 
-Verified end to end against a development store: the plan, backup, apply and
-rollback stages all compile, and every generated mutation validates against the
-Admin GraphQL schema. See `docs/design.md` for what was verified, how, and what
-remains open.
+Verified end to end against a development store: an eleven-metaobject,
+nine-category, eighteen-metafield run was applied and rolled back, and
+categories, metafield values, metaobject counts, definition counts, tags and
+every other namespace returned to baseline. Every generated mutation validates
+against the Admin GraphQL schema. See `docs/design.md` for what was verified,
+how, and what is still marked DOĞRULANAMADI.
 
 ## Licence
 

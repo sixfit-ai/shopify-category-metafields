@@ -1,0 +1,49 @@
+name: Generated artifacts are current
+
+# taxonomy/key_map.json is generated from taxonomy/index.json.gz plus
+# taxonomy/key_exceptions.json. Editing the exceptions without regenerating the
+# map would silently ship a stale mapping, so the check runs on every push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: key_map.json matches its sources
+        run: python3 scripts/build_key_map.py --check
+
+      - name: Every script still loads and exposes --help
+        run: |
+          for script in scripts/*.py; do
+            case "$script" in scripts/_*) continue;; esac
+            echo "checking $script"
+            python3 "$script" --help > /dev/null
+          done
+
+      - name: Taxonomy index header records its provenance
+        run: |
+          python3 - <<'PY'
+          import gzip, json, sys
+          with gzip.open("taxonomy/index.json.gz", "rt", encoding="utf-8") as handle:
+              index = json.load(handle)
+          for field in ("_source", "_version", "_asset_sha256", "_generator"):
+              if not index.get(field):
+                  sys.exit("index.json.gz is missing %s" % field)
+          print("index %s from %s" % (index["_version"], index["_source"]))
+          PY
