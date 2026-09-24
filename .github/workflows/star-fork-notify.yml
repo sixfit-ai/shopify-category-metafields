@@ -1,9 +1,10 @@
 name: Star and fork notifications
 
+# DISABLED while the repository is private. A private repo produces no
+# meaningful star or fork events, and the job would fail on a missing
+# SLACK_WEBHOOK_URL secret. Re-enable when going public: see docs/release.md.
 on:
-  watch:
-    types: [started]
-  fork:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -11,6 +12,7 @@ permissions:
 jobs:
   notify:
     runs-on: ubuntu-latest
+    if: ${{ vars.NOTIFICATIONS_ENABLED == 'true' }}
 
     steps:
       - name: Send Slack message
