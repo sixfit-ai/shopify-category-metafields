@@ -69,7 +69,7 @@ query Definitions($after: String) {
 # 2. Metaobject definitions, to learn each one's field shape.
 query MetaobjectDefinitions($after: String) {
   metaobjectDefinitions(first: 250, after: $after) {
-    nodes { id type name metaobjectsCount fieldDefinitions { key type { name } } }
+    nodes { id type name metaobjectsCount fieldDefinitions { key required type { name } } }
     pageInfo { hasNextPage endCursor }
   }
 }
@@ -189,7 +189,8 @@ def build(raw):
         "metaobject_definitions": {
             d["type"]: {"id": d["id"], "count": d.get("metaobjectsCount"),
                         "fields": [{"key": f["key"],
-                        "type": (f.get("type") or {}).get("name")}
+                        "type": (f.get("type") or {}).get("name"),
+                        "required": bool(f.get("required"))}
                        for f in d.get("fieldDefinitions") or []]}
             for d in raw["metaobjectDefinitions"]
         },

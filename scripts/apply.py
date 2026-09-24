@@ -237,9 +237,20 @@ def main():
                   for name, ops in stages.items()}
 
     manifest = compile_batches(stages, config["batch_size"], args.out_dir)
+
+    # A run is often re-planned mid-flight (create metaobjects, re-read, plan
+    # again), and the later plan no longer shows the categories the earlier one
+    # set. The checkpoint therefore ACCUMULATES every product this run has
+    # touched, so rollback restores them even after a re-plan.
+    touched = set()
+    if os.path.exists(args.checkpoint):
+        touched.update(load_json(args.checkpoint).get("touched_products") or [])
+    touched.update(p["gid"] for p in plan["products"])
+
     dump_json(args.checkpoint, {
         "_created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "_plan_generated": plan.get("_generated"),
+        "touched_products": sorted(touched),
         "batches": manifest,
     })
 

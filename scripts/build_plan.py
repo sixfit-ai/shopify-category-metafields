@@ -69,7 +69,12 @@ class Planner:
         self.rejected = []
         self.unresolved = []
         self.new_entries = {}
+        self.blocked_entries = {}
         self.need_definitions = {}
+        self.proposals = {}
+
+    def proposal_for(self, gid):
+        return self.proposals.get(gid)
 
     # -- key and attribute resolution ------------------------------------
 
@@ -106,6 +111,19 @@ class Planner:
             return {}
         return {v["name"]: v["id"] for v in attribute["values"]}
 
+    def required_reference_fields(self, mo_type):
+        """Required taxonomy-reference fields of a metaobject type.
+
+        Most types have exactly one. `shopify--color-pattern` has two, both
+        required: creating a colour entry also demands a Base pattern. Verified
+        on a live store -- omitting it fails with "Base pattern can't be blank".
+        """
+        definition = self.store["metaobject_definitions"].get(mo_type) or {}
+        return [f for f in definition.get("fields") or []
+                if f.get("required") and f.get("type") in
+                ("product_taxonomy_value_reference",
+                 "list.product_taxonomy_value_reference")]
+
     def reference_field(self, mo_type, handle):
         """Which metaobject field carries the taxonomy reference, and its shape.
 
@@ -130,6 +148,48 @@ class Planner:
                 return None, False
         field = candidates[0]
         return field["key"], field["type"].startswith("list.")
+
+    def companions(self, mo_type, primary_field, handle, product, category):
+        """Fill the OTHER required reference fields of a new metaobject.
+
+        A companion is only ever taken from a value the merchant's own proposal
+        supplies for the same product, or from an explicit config default. It is
+        never invented -- an unfilled companion blocks the entry instead.
+        """
+        filled, missing = [], []
+        for field in self.required_reference_fields(mo_type):
+            if field["key"] == primary_field:
+                continue
+            # Which taxonomy attribute feeds this field? Field keys are of the
+            # form "<attribute>_taxonomy_reference".
+            attribute = field["key"].replace("_taxonomy_reference", "").replace("_", "-")
+            proposed = (self.proposal_for(product["gid"]) or {}) \
+                .get("attributes", {}).get(attribute)
+            chosen = None
+            if proposed:
+                first = proposed[0]
+                chosen = first.get("value") if isinstance(first, dict) else first
+                origin = "proposed for this product"
+            if chosen is None:
+                default = (self.config.get("companion_defaults") or {}).get(
+                    "%s.%s" % (mo_type, field["key"]))
+                if default:
+                    chosen, origin = default, "config companion_defaults"
+            allowed = self.allowed_values(attribute) if attribute in \
+                category["attributes"] else self.allowed_values(attribute)
+            if chosen is None or chosen not in allowed:
+                missing.append({
+                    "field": field["key"], "attribute": attribute,
+                    "detail": "required by '%s' and not supplied; set "
+                              "companion_defaults[\"%s.%s\"] in config.json or "
+                              "propose a '%s' value for this product"
+                              % (mo_type, mo_type, field["key"], attribute)})
+                continue
+            filled.append({"field": field["key"], "attribute": attribute,
+                           "value": chosen, "value_id": allowed[chosen],
+                           "is_list": field["type"].startswith("list."),
+                           "source": origin})
+        return filled, missing
 
     def entry_for(self, key, value_id):
         spec = self.store["keys"].get(key)
@@ -261,6 +321,20 @@ class Planner:
                                       "attribute; entry not proposed" % mo_type})
                         values.append(record)
                         continue
+                    companions, missing = self.companions(
+                        mo_type, ref_field, handle, product, category)
+                    if missing:
+                        record["status"] = "blocked_new_entry"
+                        record["missing_companion"] = missing
+                        slot = self.blocked_entries.setdefault(
+                            (mo_type, value_id),
+                            {"metaobject_type": mo_type, "label": name,
+                             "attribute": handle, "taxonomy_value": value_id,
+                             "missing": missing, "needed_by": []})
+                        if gid not in slot["needed_by"]:
+                            slot["needed_by"].append(gid)
+                        values.append(record)
+                        continue
                     record["status"] = "needs_entry"
                     slot = self.new_entries.setdefault(
                         (mo_type, value_id),
@@ -269,6 +343,7 @@ class Planner:
                          "taxonomy_value": value_id,
                          "reference_field": ref_field,
                          "reference_is_list": is_list,
+                         "companions": companions,
                          "needed_by": []})
                     if gid not in slot["needed_by"]:
                         slot["needed_by"].append(gid)
@@ -346,15 +421,28 @@ def write_md(path, plan):
         category = product["category"]
         add("### %s\n" % product["title"])
         add("`%s`\n" % product["gid"])
+        reason = category["reason"] or "_no reason given_"
         if category["action"] == "set":
-            add("- **Category:** _(none)_ → **%s**  \n  %s"
-                % (category["to_name"], category["reason"] or "_no reason given_"))
+            add("**Category — set**\n")
+            add("| | Path | Id |")
+            add("|---|---|---|")
+            add("| before | _(none)_ | — |")
+            add("| after | %s | `%s` |" % (category["to_name"], category["to"]))
+            add("\nWhy: %s\n" % reason)
         elif category["action"] == "change":
-            add("- **Category:** %s → **%s**  \n  %s"
-                % (category["from_name"], category["to_name"],
-                   category["reason"] or "_no reason given_"))
+            add("**Category — changed**\n")
+            add("| | Path | Id |")
+            add("|---|---|---|")
+            add("| before | %s | `%s` |"
+                % (category["from_name"], category["from"]))
+            add("| after | %s | `%s` |" % (category["to_name"], category["to"]))
+            add("\nWhy: %s\n" % reason)
         else:
-            add("- **Category:** %s _(unchanged)_" % category["to_name"])
+            add("**Category — unchanged**\n")
+            add("| | Path | Id |")
+            add("|---|---|---|")
+            add("| kept | %s | `%s` |" % (category["to_name"], category["to"]))
+            add("\nWhy: %s\n" % reason)
 
         writable = [m for m in product["metafields"] if m["values"]]
         empty = [m for m in product["metafields"] if not m["values"]]
@@ -391,6 +479,19 @@ def write_md(path, plan):
             add("| `%s` | %s | `%s` | %d product(s) |"
                 % (record["metaobject_type"], record["label"],
                    short_gid(record["taxonomy_value"]), len(record["needed_by"])))
+        add("")
+
+    if plan["blocked_new_metaobjects"]:
+        add("## Blocked — new entries that cannot be created yet\n")
+        add("Creating these needs a value this skill will not invent. Supply it "
+            "and re-plan, or drop the attribute.\n")
+        add("| Metaobject type | Label | Missing | Needed by |")
+        add("|---|---|---|---|")
+        for record in plan["blocked_new_metaobjects"]:
+            add("| `%s` | %s | %s | %d product(s) |"
+                % (record["metaobject_type"], record["label"],
+                   "; ".join(m["detail"] for m in record["missing"]),
+                   len(record["needed_by"])))
         add("")
 
     if plan["definitions_to_enable"]:
@@ -457,6 +558,8 @@ def main():
 
     by_gid = {p["gid"]: p for p in catalog["products"]}
     planner = Planner(index, key_map, store_map, config)
+    planner.proposals = {k: v for k, v in proposals.items()
+                         if not k.startswith("_")}
 
     products = []
     for gid, proposal in proposals.items():
@@ -498,6 +601,9 @@ def main():
         "products": products,
         "new_metaobjects": sorted(planner.new_entries.values(),
                                   key=lambda r: (r["metaobject_type"], r["label"])),
+        "blocked_new_metaobjects": sorted(
+            planner.blocked_entries.values(),
+            key=lambda r: (r["metaobject_type"], r["label"])),
         "definitions_to_enable": sorted(planner.need_definitions.values(),
                                         key=lambda r: r["key"]),
         "unresolved": planner.unresolved,
@@ -518,6 +624,7 @@ def main():
     print("  metafields             : %d" % summary["metafields"])
     print("  values                 : %d" % summary["values"])
     print("  new metaobject entries : %d" % len(plan["new_metaobjects"]))
+    print("  blocked new entries    : %d" % len(plan["blocked_new_metaobjects"]))
     print("  definitions to enable  : %d" % len(plan["definitions_to_enable"]))
     print("  unresolved attributes  : %d" % len(plan["unresolved"]))
     print("  rejected               : %d" % summary["rejected"])

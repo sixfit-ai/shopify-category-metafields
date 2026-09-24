@@ -247,3 +247,68 @@ taxonomy value ids, never labels.
    every existing metaobject per type. For types with many entries this needs
    pagination; no limit problems were observed at Pancake's scale (max 24
    entries) but it is untested at scale.
+
+---
+
+# Phase 3 pilot — live run findings (2026-09-24)
+
+A two-product pilot (PROBE D, PROBE G) was run end to end against Pancake
+Clothing: backup → create 7 metaobjects → set 2 categories → set 5 metafields →
+rollback. Everything the skill itself writes was restored. Two things were not,
+and both are limits of the environment rather than bugs in the plan.
+
+## 1. `metafieldsDelete` is refused on the `shopify` namespace
+
+```
+metafieldsDelete(metafields: [{ownerId, namespace: "shopify", key: "size"}, ...])
+  -> "Access to this namespace and key on Metafields for this resource type
+      is not allowed."
+```
+
+The connector can WRITE category metafields but cannot DELETE them. A metafield
+this skill created therefore cannot be removed by rollback. The best available
+undo is `metafieldsSet` with `value: "[]"`, which was verified to work: the row
+survives holding an empty list, carrying no values.
+
+Consequence for the acceptance criterion "rollback restores metafields exactly":
+values are restored exactly, but a metafield that did not exist before the run
+is left present-and-empty rather than absent. `rollback.py` now emits the empty
+clear and warns about the residue instead of emitting a delete that fails.
+
+## 2. Setting a category makes other apps write
+
+After the two categories were set, both products gained a metafield this skill
+never wrote:
+
+```
+mc-facebook.google_product_category = "212"   (PROBE D)
+mc-facebook.google_product_category = "5410"  (PROBE G)
+```
+
+The Meta/Facebook channel app reacted to the category change and wrote its own
+mapping. It persisted after rollback, because it belongs to another app and this
+skill neither reads nor writes that namespace.
+
+This is worth telling the merchant before applying: assigning categories can
+cause connected sales-channel apps to update their own product data, and this
+skill cannot undo those side effects.
+
+## What WAS restored exactly
+
+| | before | after rollback |
+|---|---|---|
+| Categories (both pilot products) | `null` | `null` |
+| Categories (other 10 products) | unchanged | unchanged |
+| Tags (all 12 products) | baseline | identical |
+| `shopify--size` entry count | 24 | 24 |
+| All 14 metaobject definition counts | baseline | identical |
+| Product metafield definitions | 12 | 12 |
+| `sixfit.*` on both products | present | unchanged |
+
+## Bug found and fixed by the pilot
+
+Re-planning mid-run (create metaobjects → re-read → plan again) turned the
+already-applied category actions into `keep`, so rollback computed zero
+categories to restore. The checkpoint now accumulates `touched_products` across
+re-plans, and rollback restores the category of anything the run touched
+regardless of what the latest plan says.

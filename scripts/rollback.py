@@ -4,7 +4,7 @@
 Reads work/backup.json and emits, in this order:
 
   1  metafields   restore every shopify.* category metafield to its backed-up
-                  value; metafieldsDelete for any that did not exist before
+                  value; clear to an empty list any that did not exist before
   2  categories   productUpdate back to the backed-up category
   3  metaobjects  metaobjectDelete for entries this run created
   4  definitions  metaobjectDefinitionDelete for definitions this run created
@@ -54,18 +54,34 @@ def chunk(items, size):
     return [items[i:i + size] for i in range(0, len(items), size)]
 
 
-def restore_operations(backup, plan):
-    """What has to change to put every planned product back."""
+def restore_operations(backup, plan, extra_gids=()):
+    """What has to change to put every touched product back.
+
+    `extra_gids` comes from the checkpoint and covers products touched by an
+    earlier plan in the same run. Without it, a mid-run re-plan would hide a
+    category that had already been written, and rollback would leave it behind.
+    """
     sets, deletes, categories = [], [], []
-    touched = {p["gid"]: p for p in plan["products"]}
+    from_plan = {p["gid"]: p for p in plan["products"]}
+    touched = set(from_plan) | set(extra_gids)
 
-    for gid, product in backup["products"].items():
-        if gid not in touched:
+    for gid in sorted(touched):
+        product = backup["products"].get(gid)
+        if product is None:
             continue
-        planned_keys = {m["key"] for m in touched[gid]["metafields"]}
         before = product["metafields"]
+        planned = from_plan.get(gid)
 
-        for key in sorted(planned_keys):
+        # Which keys to restore. A product the current plan still describes
+        # contributes its own keys; one carried over from the checkpoint has no
+        # plan entry any more, so every key the backup holds is restored.
+        keys = {m["key"] for m in (planned or {}).get("metafields") or []}
+        if gid in extra_gids:
+            keys |= set(before)
+        if not keys:
+            keys = set(before)
+
+        for key in sorted(keys):
             if key in before:
                 sets.append({"gid": gid, "title": product["title"], "key": key,
                              "type": before[key]["type"],
@@ -76,8 +92,11 @@ def restore_operations(backup, plan):
                 deletes.append({"gid": gid, "title": product["title"],
                                 "key": key})
 
-        planned_category = touched[gid]["category"]
-        if planned_category["action"] in ("set", "change"):
+        # The category is restored for anything this run touched. Relying on
+        # the current plan's action would miss a category written by an earlier
+        # plan in the same run and since re-planned to "keep".
+        action = (planned or {}).get("category", {}).get("action")
+        if gid in extra_gids or action in ("set", "change"):
             categories.append({"gid": gid, "title": product["title"],
                                "category": product["category"]})
     return sets, deletes, categories
@@ -147,14 +166,24 @@ def doc_metafields_set(batch):
             "    userErrors { field message code }\n  }\n}"), variables
 
 
-def doc_metafields_delete(batch):
+def doc_metafields_clear(batch):
+    """Clear a metafield that did not exist before the run.
+
+    Deleting it outright is not possible: metafieldsDelete on the `shopify`
+    namespace is refused for this connector with "Access to this namespace and
+    key on Metafields for this resource type is not allowed." (verified on a
+    live store). The metafield row therefore survives rollback, holding an empty
+    list. It carries no values and no longer affects filters, feeds or search,
+    but the row itself is NOT removable through this connector -- a residue the
+    run report must state rather than paper over.
+    """
     variables = {"metafields": [
-        {"ownerId": r["gid"], "namespace": NAMESPACE, "key": r["key"]}
-        for r in batch]}
-    return ("mutation RemoveMetafields($metafields: [MetafieldIdentifierInput!]!) {\n"
-            "  metafieldsDelete(metafields: $metafields) {\n"
-            "    deletedMetafields { ownerId namespace key }\n"
-            "    userErrors { field message }\n  }\n}"), variables
+        {"ownerId": r["gid"], "namespace": NAMESPACE, "key": r["key"],
+         "type": "list.metaobject_reference", "value": "[]"} for r in batch]}
+    return ("mutation ClearMetafields($metafields: [MetafieldsSetInput!]!) {\n"
+            "  metafieldsSet(metafields: $metafields) {\n"
+            "    metafields { id namespace key value }\n"
+            "    userErrors { field message code }\n  }\n}"), variables
 
 
 def doc_categories(batch):
@@ -202,6 +231,7 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--backup", default=work("backup.json"))
     parser.add_argument("--plan", default=work("plan.json"))
+    parser.add_argument("--checkpoint", default=work("checkpoint.json"))
     parser.add_argument("--out-dir", default=work("rollback"))
     parser.add_argument("--current-products")
     parser.add_argument("--current-store-map")
@@ -215,10 +245,19 @@ def main():
     current_products = load_json(args.current_products) if args.current_products else None
     current_store = load_json(args.current_store_map) if args.current_store_map else None
 
-    sets, deletes, categories = restore_operations(backup, plan)
+    extra = []
+    if os.path.exists(args.checkpoint):
+        extra = load_json(args.checkpoint).get("touched_products") or []
+    sets, deletes, categories = restore_operations(backup, plan, extra)
     created_entries = list(backup["created_by_run"]["metaobjects"])
     deletable, warnings = guard_definitions(backup, current_products, current_store)
 
+    # Clear any previous compilation, so a stale batch from an earlier attempt
+    # can never be executed by mistake.
+    if os.path.isdir(args.out_dir):
+        for stale in os.listdir(args.out_dir):
+            if stale.startswith(("rollback_", "manifest")):
+                os.remove(os.path.join(args.out_dir, stale))
     os.makedirs(args.out_dir, exist_ok=True)
     manifest, number = [], 0
 
@@ -236,7 +275,7 @@ def main():
                              "status": "pending"})
 
     emit("metafields_restore", chunk(sets, size), doc_metafields_set)
-    emit("metafields_remove", chunk(deletes, size), doc_metafields_delete)
+    emit("metafields_clear", chunk(deletes, size), doc_metafields_clear)
     emit("categories_restore", chunk(categories, size), doc_categories)
     emit("metaobjects_delete", chunk(created_entries, size), doc_metaobject_delete)
     emit("definitions_delete", chunk(deletable, size), doc_definition_delete)
@@ -250,10 +289,16 @@ def main():
 
     print("compiled %d rollback batch(es) into %s\n" % (len(manifest), args.out_dir))
     print("  metafields to restore   : %d" % len(sets))
-    print("  metafields to remove    : %d" % len(deletes))
+    print("  metafields to clear     : %d  (set to [], not removable)" % len(deletes))
     print("  categories to restore   : %d" % len(categories))
     print("  metaobjects to delete   : %d" % len(created_entries))
     print("  definitions to delete   : %d" % len(deletable))
+    if deletes:
+        warnings.append(
+            "%d metafield(s) did not exist before the run and will be left "
+            "present but empty ([]). metafieldsDelete is refused on the shopify "
+            "namespace for this connector, so the row cannot be removed."
+            % len(deletes))
     if warnings:
         print("\n  WARNINGS — left in place on purpose:")
         for warning in warnings:
