@@ -5,8 +5,6 @@ Product Taxonomy** and fills that category's **category metafields** — colour,
 size, fabric, neckline, sleeve length, care instructions, and whatever else the
 category defines.
 
-It does not touch tags. Tagging is a separate skill,
-[shopify-tag-architect](https://github.com/sixfit-ai/shopify-tag-architect).
 
 ## Why this matters
 
