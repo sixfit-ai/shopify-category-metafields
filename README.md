@@ -32,32 +32,12 @@ Three things follow, and the skill is built around them:
 - **Entries do not pre-exist.** A store can have one neckline entry where the
   taxonomy has eighteen. Missing ones are created — as a separately approved
   step.
-- **Labels lie, taxonomy ids do not.** A Dutch store's size entry is labelled
-  `0-3 maanden`. Matching goes through the taxonomy value, never the label, and
-  nothing is ever renamed or translated.
-
-## What it does not do
-
-- **Tags.** Never read, never written. Tagging is
-  [shopify-tag-architect](https://github.com/sixfit-ai/shopify-tag-architect).
-- **Other apps' metafields.** Anything outside the `shopify` namespace —
-  `sixfit`, `mc-facebook`, your own — is reported as skipped and left alone.
-  `shopify.disclosure` and `shopify.unavailable_reason` are skipped too: they
-  sit in that namespace but are not category metafields.
-- **Invent values.** Every value comes from the pinned taxonomy. A value that is
-  not on the category's list is rejected, not rounded to the nearest match.
-- **Guess.** An attribute the product does not evidence is left empty and
-  reported. `no_match_behavior` can assign a configured default instead, but
-  only a default that is itself an allowed value.
-- **Enable store-wide settings on its own.** `standardMetafieldDefinitionEnable`
-  changes configuration for the whole store, so it is listed in the plan for
-  explicit approval and never called automatically.
 
 ## Safety
 
 - `productSet` is **never** used. It deletes list fields absent from its input,
   and metafields are a list field — one call would wipe other apps' namespaces.
-- `productUpdate` is used **only** for the `category` field, never with `tags`.
+- `productUpdate` is used **only** for the `category` field.
 - Nothing is written before a verified backup exists.
 - Rollback restores categories (including back to none), restores metafield
   values exactly, and removes the metaobjects this run created. A metafield that
@@ -138,15 +118,6 @@ colour and a base pattern; Shopify rejects a colour entry without one ("Base
 pattern can't be blank"). When a new colour is needed, the plan also needs a
 pattern with its own evidence — usually the product photo. Without it the value
 is reported as blocked rather than invented.
-
-## Status
-
-Verified end to end against a development store: an eleven-metaobject,
-nine-category, eighteen-metafield run was applied and rolled back, and
-categories, metafield values, metaobject counts, definition counts, tags and
-every other namespace returned to baseline. Every generated mutation validates
-against the Admin GraphQL schema. See `docs/design.md` for what was verified,
-how, and what is still marked DOĞRULANAMADI.
 
 ## Licence
 
