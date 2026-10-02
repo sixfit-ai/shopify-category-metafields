@@ -117,35 +117,35 @@ What a whole run looks like from your side, start to finish.
 Your products sit in Shopify with the Category column empty and no product
 details filled in. This is the starting point for most stores.
 
-<img src="docs/media/1-no-metafields.gif" alt="Products with no metafields" width="640">
+<img src="docs/media/1-no-metafields.gif" alt="Products with no metafields" width="520">
 
 ### 2. Fetch the images of your products
 
 Your product photos are downloaded so they can be used as evidence. Some
 attributes, `Pattern` above all, are only ever stated by the picture.
 
-<img src="docs/media/2-fetch-images.gif" alt="Fetching the product images" width="640">
+<img src="docs/media/2-fetch-images.gif" alt="Fetching the product images" width="520">
 
 ### 3. Run the prompt
 
 You say what you want in ordinary English, and the run begins: it confirms your
 store, reads your catalog, and works out what each product is.
 
-<img src="docs/media/3-run-the-prompt.gif" alt="Running the prompt" width="640">
+<img src="docs/media/3-run-the-prompt.gif" alt="Running the prompt" width="520">
 
 ### 4. Answer the questions
 
 You are shown what it proposes and asked to approve it. Nothing is written to
 your store before this point.
 
-<img src="docs/media/4-answer-the-questions.gif" alt="Answering the approval questions" width="640">
+<img src="docs/media/4-answer-the-questions.gif" alt="Answering the approval questions" width="520">
 
 ### 5. Your metafields are ready
 
 The categories and product details are written, verified, and visible in your
 Shopify admin.
 
-<img src="docs/media/5-metafields-are-ready.gif" alt="Metafields filled in" width="640">
+<img src="docs/media/5-metafields-are-ready.gif" alt="Metafields filled in" width="520">
 
 ---
 
