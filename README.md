@@ -15,6 +15,7 @@ is written, you approve it, and you can undo it afterwards.
 
 - [What problem this solves](#what-problem-this-solves)
 - [What a finished product looks like](#what-a-finished-product-looks-like)
+- [The five steps, in pictures](#the-five-steps-in-pictures)
 - [What you need before you start](#what-you-need-before-you-start)
 - [Setup, step by step](#setup-step-by-step)
 - [Your first run](#your-first-run)
@@ -104,6 +105,47 @@ Three things worth noticing, because they describe how the whole tool behaves:
 3. **If your product does not say, the field is left empty on purpose** and
    reported to you. An empty field is a correct answer. A guessed one is a
    defect that ends up in Google.
+
+---
+
+## The five steps, in pictures
+
+What a whole run looks like from your side, start to finish.
+
+### 1. No metafields
+
+Your products sit in Shopify with the Category column empty and no product
+details filled in. This is the starting point for most stores.
+
+![Products with no metafields](docs/media/1-no-metafields.gif)
+
+### 2. Fetch the images of your products
+
+Your product photos are downloaded so they can be used as evidence. Some
+attributes, `Pattern` above all, are only ever stated by the picture.
+
+![Fetching the product images](docs/media/2-fetch-images.gif)
+
+### 3. Run the prompt
+
+You say what you want in ordinary English, and the run begins: it confirms your
+store, reads your catalog, and works out what each product is.
+
+![Running the prompt](docs/media/3-run-the-prompt.gif)
+
+### 4. Answer the questions
+
+You are shown what it proposes and asked to approve it. Nothing is written to
+your store before this point.
+
+![Answering the approval questions](docs/media/4-answer-the-questions.gif)
+
+### 5. Your metafields are ready
+
+The categories and product details are written, verified, and visible in your
+Shopify admin.
+
+![Metafields filled in](docs/media/5-metafields-are-ready.gif)
 
 ---
 

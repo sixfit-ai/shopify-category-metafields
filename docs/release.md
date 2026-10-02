@@ -86,6 +86,10 @@ Rebuild the bundle first if any of `SKILL.md`, `scripts/`, `taxonomy/`,
   ```
 - `docs/video-shoot.md` is a recording runbook that names the dev store. Delete
   it before going public, or scrub it the same way.
+- `docs/media/*.gif` are the README walkthrough recordings. They show the dev
+  store's product titles (Pancake*, PROBE*) and a local path containing a macOS
+  username. The grep above does not catch either, since neither is a domain nor
+  a gid. Decide before flipping visibility whether to re-record or crop them.
 - `work/` is gitignored and has never been committed — verify with
   `git log --all --name-only -- work/ | head`, which should print nothing.
 - The README's Known limits section describes real connector behaviour. Keep it:
