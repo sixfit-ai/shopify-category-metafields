@@ -1,9 +1,8 @@
 name: Download tracker
 
-# DISABLED while the repository is private. There are no releases to count
-# yet and no download-stats branch to write to. Re-enable when going public:
-# see docs/release.md.
 on:
+  schedule:
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:

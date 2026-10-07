@@ -1,10 +1,9 @@
 name: Star and fork notifications
 
-# DISABLED while the repository is private. A private repo produces no
-# meaningful star or fork events, and the job would fail on a missing
-# SLACK_WEBHOOK_URL secret. Re-enable when going public: see docs/release.md.
 on:
-  workflow_dispatch:
+  watch:
+    types: [started]
+  fork:
 
 permissions:
   contents: read
