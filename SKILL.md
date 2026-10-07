@@ -96,7 +96,10 @@ Two reads, both paginated to exhaustion.
 
 **The catalog.** Fetch every product with `id`, `title`, `descriptionHtml`,
 `productType`, `vendor`, `status`, `options { name values }`,
-`category { id fullName isLeaf }`, and `metafields(first: 50)`. Fetch **all**
+`category { id fullName isLeaf }`,
+`media(first: 5) { nodes { ... on MediaImage { alt image { url width height } } } }`
+and `metafields(first: 50)`. Without `media` there is nothing to fetch the
+images from. Fetch **all**
 namespaces, not just `shopify` — the others must be seen so they can be reported
 as untouched. Save each page, then:
 
@@ -105,11 +108,23 @@ python3 scripts/normalize_catalog.py work/raw_products.json --stats
 ```
 
 **The images.** Some attributes are only ever stated by the picture — `pattern`
-above all. Fetch them now so they can be looked at in Phase 2:
+above all. Fetching them is automatic and always happens: every time the
+merchant asks for categories or metafields, on all their products or on a few
+named ones, run this straight after the catalog read, before anything else:
 
 ```
 python3 scripts/fetch_images.py
 ```
+
+- **Run it yourself.** Never ask the merchant to run it, and never ask whether
+  to fetch images. They asked for their metafields; the images are part of that.
+- **Run it even if the images may already be there.** It skips any image already
+  in `work/images/`, so a repeat costs nothing, and it catches products whose
+  photo was never fetched.
+- **It fetches only what the catalog read returned.** When the merchant names
+  products, read only those, and only their images are downloaded.
+- **Do not start Phase 2 for a product without its image** unless the script
+  reported that product has no photo in Shopify. Then say so in the plan.
 
 **The store.** The store, not the taxonomy file, decides what is writable today.
 

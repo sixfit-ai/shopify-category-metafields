@@ -11,58 +11,13 @@ is written, you approve it, and you can undo it afterwards.
 
 ---
 
-## Contents
-
-- [What problem this solves](#what-problem-this-solves)
-- [What a finished product looks like](#what-a-finished-product-looks-like)
-- [The five steps, in pictures](#the-five-steps-in-pictures)
-- [What you need before you start](#what-you-need-before-you-start)
-- [Setup, step by step](#setup-step-by-step)
-- [Your first run](#your-first-run)
-- [What happens during a run](#what-happens-during-a-run)
-- [The three things you approve](#the-three-things-you-approve)
-- [Two things to know before you approve](#two-things-to-know-before-you-approve)
-- [Undoing a run](#undoing-a-run)
-- [What it will never do](#what-it-will-never-do)
-- [Settings you might want to change](#settings-you-might-want-to-change)
-- [If something goes wrong](#if-something-goes-wrong)
-- [Frequently asked](#frequently-asked)
-- [Word list](#word-list)
-- [How it actually works](#how-it-actually-works)
-- [For developers](#for-developers)
-
----
-
 ## What problem this solves
 
-Shopify has one official list of what products are, called the Standard Product
-Taxonomy. When a product sits in the right place on that list, the category
-brings a set of defined attributes with it: a t-shirt has a neckline and a
-sleeve length, a dog bed does not. Filling those attribute values in is what
-makes the following actually work:
-
-| What you see | What is reading your data behind it |
-|---|---|
-| Storefront filters ("Filter by size / colour / material") | the category product details |
-| Google Merchant Center / Google Shopping attributes | the standard category and its attributes |
-| Meta (Facebook & Instagram) catalog fields | the same standard category list |
-| Shopify search, related products, recommendations | the category and attributes Shopify indexes |
-| Shopify Flow rules, Markets, most third-party apps | the same fields |
-
-If the **Product category** field on your products is blank, none of the above
-has anything to work with. That is the normal state for most stores, and for
-every store that migrated in from another platform. A category detail is a
-structured value that every sales channel understands, which is what makes it
-usable outside your own theme.
-
-Typical symptoms that lead people here:
-
-- Filters on your storefront are empty, half-empty, or filter on the wrong things.
-- Google Merchant Center says *missing attributes* or *incomplete product data*,
-  or files your products under a category that makes no sense.
-- Meta catalog items get limited reach or never get approved.
-- Shopify's own search and "you may also like" feel random.
-- You have thousands of products and no appetite for editing them one at a time.
+Storefront filters, Google Shopping, Meta catalogs and Shopify search all read
+a product's **category** and its **category details** (size, colour, fabric and
+so on). On most stores those fields are empty, so every one of those channels
+has nothing to work with. Filling them in by hand takes days. This does it in
+one conversation.
 
 ---
 
@@ -108,44 +63,61 @@ Three things worth noticing, because they describe how the whole tool behaves:
 
 ---
 
-## The five steps, in pictures
+## How it works
 
-What a whole run looks like from your side, start to finish.
+### 1. Install and verify
 
-### 1. No metafields
+**Install**
 
-Your products sit in Shopify with the Category column empty and no product
-details filled in. This is the starting point for most stores.
+1. Download `shopify-category-metafields.skill` from the
+   [Releases page](../../releases).
+2. Add it to Claude:
+   - **Claude app or claude.ai:** Settings > Capabilities > Skills, then upload
+     the file.
+   - **Claude Code:** run
+     `unzip ~/Downloads/shopify-category-metafields.skill -d ~/.claude/skills/`
+     and restart Claude Code.
+3. In Claude's connector settings, turn on the **Shopify** connector and log in
+   to your store.
 
-<img src="docs/media/1-no-metafields.gif" alt="Products with no metafields" width="520">
+**Verify**
 
-### 2. Fetch the images of your products
+- The skill is listed under Settings > Capabilities > Skills. In Claude Code,
+  the folder `~/.claude/skills/shopify-category-metafields/` exists.
+- Ask Claude "Which Shopify store are you connected to?" It should answer with
+  your store's name.
+- Run `python3 --version` in Terminal (`python --version` on Windows). It
+  should print 3.8 or higher.
 
-Your product photos are downloaded so they can be used as evidence. Some
-attributes, `Pattern` above all, are only ever stated by the picture.
+More detail is in [Setup, step by step](#setup-step-by-step).
 
-<img src="docs/media/2-fetch-images.gif" alt="Fetching the product images" width="520">
+### 2. Run the prompt
 
-### 3. Run the prompt
+Tell Claude what you want in ordinary English. It confirms your store, reads
+your catalog and your store's settings, and fetches your product images itself.
+You don't run anything. The photos are evidence: some details, `Pattern` above
+all, appear only in the picture.
 
-You say what you want in ordinary English, and the run begins: it confirms your
-store, reads your catalog, and works out what each product is.
+<img src="docs/media/2-run-the-prompt.gif" alt="Running the prompt" width="520">
 
-<img src="docs/media/3-run-the-prompt.gif" alt="Running the prompt" width="520">
+### 3. Answer the questions
 
-### 4. Answer the questions
+You see every proposed category and value, with where each one came from, and
+approve them. Nothing is written to your store before this point.
 
-You are shown what it proposes and asked to approve it. Nothing is written to
-your store before this point.
+<img src="docs/media/3-answer-the-questions.gif" alt="Answering the approval questions" width="520">
 
-<img src="docs/media/4-answer-the-questions.gif" alt="Answering the approval questions" width="520">
+### 4. Metafields are written
 
-### 5. Your metafields are ready
+The categories and product details are written, checked against the plan, and
+show up in your Shopify admin.
 
-The categories and product details are written, verified, and visible in your
-Shopify admin.
+<img src="docs/media/4-metafields-are-written.png" alt="A product's category metafields filled in, in the Shopify admin" width="520">
 
-<img src="docs/media/5-metafields-are-ready.gif" alt="Metafields filled in" width="520">
+### 5. Get your score
+
+Check how complete your product data is now at
+[sixfit.ai/metafield-check](https://sixfit.ai/metafield-check).
 
 ---
 
@@ -298,7 +270,7 @@ Three reads, all of them harmless:
 - **Your store's own settings**: which detail fields are switched on, and which
   values your store already holds. This matters more than you would expect, and
   it is why you get asked the questions you get asked in phase 2. See
-  [How it actually works](#how-it-actually-works).
+  [Under the hood](#under-the-hood).
 
 Still nothing written.
 
@@ -600,7 +572,7 @@ which all reading and writing happens, using your own Shopify permissions.
 
 ---
 
-## How it actually works
+## Under the hood
 
 This section explains why you are asked for three separate approvals instead of
 one. You do not need it to use the tool.
