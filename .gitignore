@@ -13,3 +13,6 @@ __pycache__/
 *.pyc
 taxonomy/index.json
 work/images/
+
+# Internal notes, kept locally and never committed
+internal/

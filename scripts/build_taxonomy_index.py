@@ -121,7 +121,7 @@ def build(raw, keep_verticals=None):
         if alias:
             # The metafield key for an alias is NOT confirmed to follow the
             # alias handle rather than the base handle; both are recorded so
-            # the mapping layer can decide. See docs/design.md.
+            # the mapping layer can decide.
             entry["base"] = alias["base"]
         attributes[handle] = entry
 
