@@ -20,9 +20,10 @@ Dutch, Turkish or German store's existing values are recognised and reused as
 they are. Values this tool newly creates get Shopify's English name as a label;
 your existing ones are never renamed.
 
-**Can I run it again later for new products?** Yes. Products whose details are
-already set are reported as "already set" and skipped, so a repeat run naturally
-picks up only what is new.
+**Can I run it again later for new products?** Yes. Any detail field that
+already has a value is reported as "already set" and left alone. A repeat run
+fills only the fields that are still empty, on new products and on older ones
+alike.
 
 **Does it work for stores that are not clothing?** Yes. The category list covers
 14,606 categories across every vertical Shopify defines: furniture, food,
@@ -32,7 +33,8 @@ attributes, which is why it makes the clearest examples.
 **Does it cost anything?** The tool is free and MIT-licensed. You pay only for
 your normal Claude usage.
 
-**Is my store data sent anywhere else?** No. Your catalog is read by Claude
-through the Shopify connector, and the helper scripts used during a run do their
-work locally. The only thing any of them downloads is your own product photos,
-from Shopify's own image servers.
+**Where does my store data go?** To Claude and nowhere else. Claude reads your
+catalog through the Shopify connector, the same way it handles anything else you
+share in a conversation. The helper scripts run on your computer and contact no
+outside service. The only thing they download is your own product photos, from
+Shopify's image servers.
