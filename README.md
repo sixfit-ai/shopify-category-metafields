@@ -63,6 +63,8 @@ your whole catalog.
 3. In Claude's connector settings, turn on the **Shopify** connector and log in
    to your store.
 
+<img src="docs/media/1-install.gif" alt="Downloading the skill from the Releases page and uploading it under Customize > Skills" width="520">
+
 **Verify**
 
 - The skill is listed under **Customize > Skills**.
