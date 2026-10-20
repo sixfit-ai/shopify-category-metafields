@@ -147,9 +147,14 @@ one; it just still appears in that product's field list.
 
 ## Undoing a run
 
-Ask Claude:
+In the same conversation as the run, ask Claude:
 
 > Undo the run.
+
+In the browser and the desktop app, the backup lives only inside the
+conversation that made it; a new conversation has nothing to undo from. In
+Claude Code the backup is a file in the skill's `work/` folder and survives
+between sessions.
 
 It prepares the exact reverse of what it did and, with your confirmation, runs
 it. (Mechanically: a script compiles the reversing operations from the backup,

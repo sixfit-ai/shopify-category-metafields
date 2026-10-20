@@ -6,8 +6,13 @@ details", or name it outright: "use the shopify-category-metafields skill".
 Check that the skill shows up in your skills list and that the Shopify connector
 is connected.
 
-**"python3: command not found" or similar.** Python is not installed, or not on
-the system path. Install it from
+**Image downloads fail with "Name or service not known".** Claude cannot reach
+Shopify's image server. Open **Settings > Capabilities**, check that **Allow
+network egress** is on, add `cdn.shopify.com` under **Additional allowed
+domains**, press **Add**, and start the run again.
+
+**"python3: command not found" or similar (Claude Code only).** Python is not
+installed on your computer, or not on the system path. Install it from
 [python.org/downloads](https://www.python.org/downloads/). On Windows, tick
 "Add Python to PATH" during setup, then start a new terminal window.
 
@@ -37,4 +42,6 @@ not yet state.
 
 **You changed your mind about the whole thing.** See
 [Undoing a run](how-a-run-works.md#undoing-a-run). The backup is kept as a file, so this works
-later in the conversation too, not only immediately afterwards.
+later in the conversation too, not only immediately afterwards. In the browser
+and the desktop app it does not carry over to a new conversation, so ask in the
+same one. In Claude Code it does.

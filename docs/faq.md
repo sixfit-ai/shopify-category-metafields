@@ -35,6 +35,6 @@ your normal Claude usage.
 
 **Where does my store data go?** To Claude and nowhere else. Claude reads your
 catalog through the Shopify connector, the same way it handles anything else you
-share in a conversation. The helper scripts run on your computer and contact no
-outside service. The only thing they download is your own product photos, from
+share in a conversation. The helper scripts run inside Claude's own code environment
+(on your computer, if you use Claude Code) and contact no outside service. The only thing they download is your own product photos, from
 Shopify's image servers.
